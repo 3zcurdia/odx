@@ -7,6 +7,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type Config struct {
+	OutputFile string
+	SkipIndex  bool
+}
+
 type Mesh struct {
 	Vertices    [][]float64
 	Faces       [][]int
@@ -15,13 +20,13 @@ type Mesh struct {
 }
 
 // Init initializes a new ODB file with the core tables
-func Init(filePath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", filePath)
+func Init(config Config) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", config.OutputFile)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := createTables(db, true); err != nil {
+	if err := createTables(db, config.SkipIndex); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -29,7 +34,7 @@ func Init(filePath string) (*sql.DB, error) {
 	return db, nil
 }
 
-func createTables(db *sql.DB, withIndexes bool) error {
+func createTables(db *sql.DB, skipIndexes bool) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS vertices (
 		id INTEGER PRIMARY KEY,
@@ -58,7 +63,7 @@ func createTables(db *sql.DB, withIndexes bool) error {
 	if err != nil {
 		return err
 	}
-	if withIndexes {
+	if !skipIndexes {
 		_, err = db.Exec(`
 			CREATE UNIQUE INDEX IF NOT EXISTS vertices_xyz ON vertices (x, y, z);
 			CREATE UNIQUE INDEX IF NOT EXISTS faces_cuad ON faces (vertex1, vertex2, vertex3, vertex4);

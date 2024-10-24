@@ -39,6 +39,7 @@ func handleConvert(args []string) {
 	// Setup flags for convert command
 	convertCmd := flag.NewFlagSet("convert", flag.ExitOnError)
 	outputFlag := convertCmd.String("o", "", "Output file path (optional)")
+	skipIndexFlag := convertCmd.Bool("skip-index", false, "Skip unique index creation")
 
 	err := convertCmd.Parse(args)
 	if err != nil {
@@ -54,31 +55,32 @@ func handleConvert(args []string) {
 	}
 
 	inputFile := convertCmd.Arg(0)
-	outputFile := *outputFlag
-
-	// If no output file specified, use input file name with .odx extension
-	if outputFile == "" {
-		outputFile = replaceExtension(inputFile, ".odx")
+	config := core.Config{
+		OutputFile: *outputFlag,
+		SkipIndex:  *skipIndexFlag,
 	}
 
-	// Perform conversion
-	if err := convertFile(inputFile, outputFile); err != nil {
+	if config.OutputFile == "" {
+		config.OutputFile = replaceExtension(inputFile, ".odx")
+	}
+
+	if err := convertFile(inputFile, config); err != nil {
 		fmt.Printf("Error converting file: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Successfully converted %s to %s\n", inputFile, outputFile)
+	fmt.Printf("Successfully converted %s to %s\n", inputFile, config.OutputFile)
 }
 
-func convertFile(input, output string) error {
+func convertFile(input string, config core.Config) error {
 	if _, err := os.Stat(input); os.IsNotExist(err) {
 		return fmt.Errorf("input file does not exist: %s", input)
 	}
-	if _, err := os.Stat(output); !os.IsNotExist(err) {
-		return fmt.Errorf("output file already exists: %s", output)
+	if _, err := os.Stat(config.OutputFile); !os.IsNotExist(err) {
+		return fmt.Errorf("output file already exists: %s", config.OutputFile)
 	}
 
-	db, err := core.Init(output)
+	db, err := core.Init(config)
 	if err != nil {
 		return fmt.Errorf("error initializing database: %v", err)
 	}
@@ -122,4 +124,5 @@ func printUsage() {
 	fmt.Println("  help                            Show this help message")
 	fmt.Println("\nConvert options:")
 	fmt.Println("  -o string                       Output file path (default: input file path with .odx extension)")
+	fmt.Println("  -skip-index                     Skip unique index creation (default: false)")
 }
