@@ -1,4 +1,4 @@
-module github.com/3zcurdia/odb
+module github.com/3zcurdia/odx
 
 go 1.23.2
 

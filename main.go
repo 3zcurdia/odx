@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 
-	core "github.com/3zcurdia/odb/odb/core"
-	parsers "github.com/3zcurdia/odb/odb/parsers"
+	core "github.com/3zcurdia/odx/odx/core"
+	parsers "github.com/3zcurdia/odx/odx/parsers"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	db, err := core.Init("data/bunny.odb")
+	db, err := core.Init("data/bunny.odx")
 	if err != nil {
 		panic(fmt.Sprintf("error initializing database: %v", err))
 	}

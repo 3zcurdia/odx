@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	core "github.com/3zcurdia/odb/odb/core"
+	core "github.com/3zcurdia/odx/odx/core"
 )
 
 // LoadPLY reads and parses the PLY file into a core Mesh struct
