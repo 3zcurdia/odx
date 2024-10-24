@@ -21,7 +21,7 @@ func Init(filePath string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := createTables(db); err != nil {
+	if err := createTables(db, true); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func Init(filePath string) (*sql.DB, error) {
 	return db, nil
 }
 
-func createTables(db *sql.DB) error {
+func createTables(db *sql.DB, withIndexes bool) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS vertices (
 		id INTEGER PRIMARY KEY,
@@ -53,11 +53,21 @@ func createTables(db *sql.DB) error {
 		inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
-	CREATE UNIQUE INDEX IF NOT EXISTS vertices_xyz ON vertices (x, y, z);
-	CREATE UNIQUE INDEX IF NOT EXISTS faces_cuad ON faces (vertex1, vertex2, vertex3, vertex4);
 	`
 	_, err := db.Exec(query)
-	return err
+	if err != nil {
+		return err
+	}
+	if withIndexes {
+		_, err = db.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS vertices_xyz ON vertices (x, y, z);
+			CREATE UNIQUE INDEX IF NOT EXISTS faces_cuad ON faces (vertex1, vertex2, vertex3, vertex4);
+			`)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Insert inserts a mesh into an ODB file
