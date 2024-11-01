@@ -19,69 +19,6 @@ type Mesh struct {
 	FaceCount   int
 }
 
-// Init initializes a new ODB file with the core tables
-func Init(config Config) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", config.OutputFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := createTables(db, config.SkipIndex); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	return db, nil
-}
-
-// It opens a mesh from an ODX file
-func Open(filename string) (*Mesh, error) {
-	db, err := sql.Open("sqlite3", filename)
-	if err != nil {
-		return nil, err
-	}
-	mesh := &Mesh{}
-
-	rows, err := db.Query("SELECT * FROM vertices")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var x float64
-		var y float64
-		var z float64
-		err := rows.Scan(&id, &x, &y, &z)
-		if err != nil {
-			return nil, err
-		}
-		mesh.Vertices = append(mesh.Vertices, []float64{x, y, z})
-	}
-
-	rows, err = db.Query("SELECT id, vertex1, vertex2, vertex3 FROM faces")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var vertex1 int
-		var vertex2 int
-		var vertex3 int
-		// var vertex4 int
-		err := rows.Scan(&id, &vertex1, &vertex2, &vertex3) //, &vertex4)
-		if err != nil {
-			return nil, err
-		}
-		mesh.Faces = append(mesh.Faces, []int{vertex1 - 1, vertex2 - 1, vertex3 - 1})
-	}
-
-	return mesh, nil
-}
-
 func createTables(db *sql.DB, skipIndexes bool) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS vertices (
@@ -121,32 +58,6 @@ func createTables(db *sql.DB, skipIndexes bool) error {
 		}
 	}
 	return nil
-}
-
-// Insert inserts a mesh into an ODB file
-func Insert(db *sql.DB, mesh *Mesh) error {
-	validate(mesh)
-	tx, err := db.Begin()
-	if err != nil {
-		return fmt.Errorf("error starting transaction: %v", err)
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	if err = insertInfo(tx, mesh); err != nil {
-		return err
-	}
-	if err = insertVertices(tx, mesh.Vertices); err != nil {
-		return err
-	}
-	if err = insertFaces(tx, mesh.Faces); err != nil {
-		return err
-	}
-
-	return tx.Commit()
 }
 
 func validate(mesh *Mesh) error {
@@ -206,4 +117,45 @@ func insertFaces(tx *sql.Tx, faces [][]int) error {
 		}
 	}
 	return nil
+}
+
+// Insert inserts a mesh into an ODB file
+func Insert(db *sql.DB, mesh *Mesh) error {
+	validate(mesh)
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err = insertInfo(tx, mesh); err != nil {
+		return err
+	}
+	if err = insertVertices(tx, mesh.Vertices); err != nil {
+		return err
+	}
+	if err = insertFaces(tx, mesh.Faces); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// Init initializes a new ODB file with the core tables
+func Init(config Config) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", config.OutputFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := createTables(db, config.SkipIndex); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return db, nil
 }
